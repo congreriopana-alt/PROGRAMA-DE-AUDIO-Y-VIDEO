@@ -53,6 +53,8 @@ main{padding-top:18px}
 .btn.ghost{background:#fff;color:var(--navy)}
 .btn.ghost:hover{background:#eef2fa}
 .btn.small{padding:4px 9px;font-size:13px}
+.btn.wa{background:#1f9d55;border-color:#1f9d55}
+.btn.wa:hover{background:#17803f}
 .btn:disabled{opacity:.5;cursor:not-allowed}
 details.paste{margin-top:12px}
 details.paste summary{cursor:pointer;color:var(--navy);font-weight:600}
@@ -184,6 +186,7 @@ dialog input.t{width:100%;border:1px solid var(--line);border-radius:8px;padding
       <button class="btn" data-act="xlsx-month">Descargar mes (Excel)</button>
       <button class="btn ghost" data-act="xlsx-all">Descargar año (Excel)</button>
       <button class="btn" data-act="img-month">Descargar mes (imagen)</button>
+      <button class="btn wa" data-act="img-wa">Mes por WhatsApp</button>
       <button class="btn ghost" data-act="csv">CSV</button>
       <button class="btn ghost" data-act="wa">Copiar para WhatsApp</button>
       <button class="btn ghost" data-act="print">Imprimir</button>
@@ -203,6 +206,7 @@ dialog input.t{width:100%;border:1px solid var(--line);border-radius:8px;padding
         <select id="cardSel"></select>
         <p class="hint">La tarjeta se llena sola con los nombres del programa. El saludo cambia según la hora en que la generas. El jueves usa un diseño y el sábado otro.</p>
         <div class="bar">
+          <button class="btn wa" data-act="card-wa">Enviar por WhatsApp</button>
           <button class="btn" data-act="card-png">Descargar imagen</button>
           <button class="btn ghost" data-act="card-share" id="shareBtn">Compartir</button>
           <button class="btn ghost" data-act="card-zip">Todas del mes (ZIP)</button>
@@ -1030,9 +1034,28 @@ function monthBlob(){
 }
 function monthImgName(){return 'Programa_Sonido_'+cap(C.MESES[state.cur])+'_'+YEAR+'.png';}
 
+/* ---------- WhatsApp ---------- */
+function isMobile(){return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');}
+function shareWA(blobP,name,text){
+  var wa='https://wa.me/?text='+encodeURIComponent(text);
+  if(isMobile()&&navigator.share&&navigator.canShare){
+    blobP.then(function(b){var f=new File([b],name,{type:'image/png'});
+      if(navigator.canShare({files:[f]}))return navigator.share({files:[f],text:text});
+      window.open(wa,'_blank');
+    }).catch(function(e){if(e&&e.name==='AbortError')return;toast('No se pudo abrir WhatsApp. Usa Descargar imagen.');});
+    return;
+  }
+  // computadora: copia la imagen y abre WhatsApp para pegarla con Ctrl+V
+  var done=function(copied){window.open(wa,'_blank');toast(copied?'Imagen copiada. En WhatsApp elige el chat y pega con Ctrl+V.':'Se abrió WhatsApp. La imagen no se pudo copiar: usa Descargar imagen y adjúntala.');};
+  if(navigator.clipboard&&navigator.clipboard.write&&window.ClipboardItem){
+    navigator.clipboard.write([new ClipboardItem({'image/png':blobP})]).then(function(){done(true);},function(){done(false);});
+  }else done(false);
+}
+
 /* ---------- sincronización con Google Drive ---------- */
 var GAS_SCRIPT="// Sonido · El Río Panajachel — sincronización entre aparatos\n// 1) Cambia el CODIGO por una clave tuya (la misma que pondrás en la app).\n// 2) Implementar > Nueva implementación > Aplicación web\n//    Ejecutar como: Yo   |   Quién tiene acceso: Cualquier persona\n// 3) Copia la URL que termina en /exec y pégala en la app (botón \"Sincronizar\").\nvar CODIGO = 'sonido2026';\nvar ARCHIVO = 'sonido-el-rio-datos.json';\n\nfunction leer_() {\n  var it = DriveApp.getFilesByName(ARCHIVO);\n  if (it.hasNext()) {\n    try { var d = JSON.parse(it.next().getBlob().getDataAsString()); d.months = d.months || {}; return d; } catch (e) {}\n  }\n  return { months: {}, cfg: null };\n}\nfunction guardar_(d) {\n  var txt = JSON.stringify(d), it = DriveApp.getFilesByName(ARCHIVO);\n  if (it.hasNext()) it.next().setContent(txt);\n  else DriveApp.createFile(ARCHIVO, txt, MimeType.PLAIN_TEXT);\n}\nfunction mezclar_(srv, inc) {\n  var out = { months: srv.months || {}, cfg: srv.cfg || null };\n  var im = (inc && inc.months) || {};\n  Object.keys(im).forEach(function (k) {\n    var a = im[k], b = out.months[k];\n    if (a && a.updated && (!b || !b.updated || String(a.updated) > String(b.updated))) out.months[k] = a;\n  });\n  var c = inc && inc.cfg;\n  if (c && c.updated && (!out.cfg || !out.cfg.updated || String(c.updated) > String(out.cfg.updated))) out.cfg = c;\n  return out;\n}\nfunction salida_(o) {\n  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);\n}\nfunction doPost(e) {\n  var lock = LockService.getScriptLock();\n  lock.waitLock(25000);\n  try {\n    var b = JSON.parse((e && e.postData && e.postData.contents) || '{}');\n    if (b.code !== CODIGO) return salida_({ ok: false, error: 'Código incorrecto' });\n    var m = mezclar_(leer_(), b);\n    guardar_(m);\n    return salida_({ ok: true, data: m });\n  } catch (err) {\n    return salida_({ ok: false, error: String(err) });\n  } finally {\n    lock.releaseLock();\n  }\n}\nfunction doGet() { return salida_({ ok: true, mensaje: 'Sonido El Río: sincronización activa' }); }\n";
 var KSYNC='sonido2026:sync';
+var DEFAULT_SYNC_URL='https://script.google.com/macros/s/AKfycbwFgGTr4pncy7IFuZv_96r2HRQMHZi8w4KL-YXVbsnHg4nUGzVKoqGogbo-hra0BnDxug/exec',DEFAULT_SYNC_CODE='sonido2026';
 var sync={url:'',code:'',busy:false,pending:false,last:null,err:null,timer:null};
 function loadSync(){try{var o=JSON.parse(store.get(KSYNC)||'{}');sync.url=o.url||'';sync.code=o.code||'';}catch(e){}}
 function saveSyncCfg(){store.set(KSYNC,JSON.stringify({url:sync.url,code:sync.code}));}
@@ -1075,12 +1098,14 @@ function doSync(manual){
     else if(manual)toast('Todo está al día');
   }).catch(function(e){
     sync.err=(e&&e.message)||String(e);setSyncStatus();
+    if(!manual&&/Código incorrecto/.test(sync.err)&&!sync.asked){sync.asked=true;openSync();showErr('La clave no coincide con la de tu script de Google. Escribe la clave que pusiste en el script (CODIGO) y toca Guardar y sincronizar.');}
     if(manual)showErr('No se pudo sincronizar: '+sync.err+'. Revisa la URL, la clave y que la implementación esté en "Cualquier persona".');
   }).then(function(){sync.busy=false;if(sync.pending){sync.pending=false;scheduleSync(500);}});
 }
 function scheduleSync(ms){if(!syncOn())return;clearTimeout(sync.timer);sync.timer=setTimeout(function(){doSync(false);},ms==null?1500:ms);}
 function initSync(){
-  loadSync();
+  if(store.get(KSYNC)===null&&DEFAULT_SYNC_URL){sync.url=DEFAULT_SYNC_URL;sync.code=DEFAULT_SYNC_CODE;saveSyncCfg();}
+  else loadSync();
   try{
     var q=new URLSearchParams(location.search),u=q.get('sync'),k=q.get('code');
     if(u){sync.url=u;sync.code=k||'';saveSyncCfg();history.replaceState(null,'',location.pathname);toast('Sincronización conectada');}
@@ -1140,6 +1165,8 @@ function onAction(act,el){
     else{fallbackCopy(txt);done();}
   }else if(act==='print'){window.print();}
   else if(act==='card-png'){var cr=cardRow();if(!cr){toast('No hay reunión para descargar');return;}cardBlob(cr).then(function(b){b.arrayBuffer().then(function(ab){download(cardName(cr),new Uint8Array(ab),'image/png');toast('Descargando recordatorio');});});}
+  else if(act==='card-wa'){var wr=cardRow();if(!wr){toast('No hay reunión para enviar');return;}shareWA(cardBlob(wr),cardName(wr),cardText(wr));}
+  else if(act==='img-wa'){if(!getMonth(mi).rows.length){toast('No hay programa en este mes');return;}shareWA(monthBlob(),monthImgName(),'Programa de sonido – '+cap(C.MESES[mi])+' '+YEAR+' · El Río Panajachel');}
   else if(act==='card-share'){var sr=cardRow();if(!sr)return;cardBlob(sr).then(function(b){var f=new File([b],cardName(sr),{type:'image/png'});
     if(navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f],text:cardText(sr)}).catch(function(){});
     else if(navigator.clipboard&&window.ClipboardItem)navigator.clipboard.write([new ClipboardItem({'image/png':b})]).then(function(){toast('Imagen copiada: pégala en WhatsApp');},function(){toast('Tu navegador no permite compartir: usa Descargar imagen');});
