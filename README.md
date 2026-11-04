@@ -47,6 +47,14 @@ Si cambias el script, crea una **nueva implementación** y actualiza la URL.
 Botón **Descargar mes (imagen)**: guarda un PNG con la tabla del mes (mismo formato de tu hoja de Excel),
 listo para mandar por WhatsApp. Las tarjetas de recordatorio siguen en "Recordatorios para compartir".
 
+## Programa de acomodadores (para no traslapar)
+
+En "Sube los PDFs del mes" también puedes subir la **imagen o foto** del programa de acomodadores
+(o elegir *Acomodadores* al pegar texto). La app lee las fechas y los nombres en el teléfono,
+sin enviar nada a internet, y esos hermanos quedan como ocupados ese día.
+Funciona mejor con una captura recta y nítida. Revisa la lista "Ocupados" por si la lectura falló en algún nombre.
+La primera vez descarga unos 10 MB para leer imágenes; después funciona sin internet.
+
 ## Importante
 
 - Sin la sincronización, los programas quedan solo en el navegador de cada aparato.
