@@ -143,8 +143,8 @@ dialog input.t{width:100%;border:1px solid var(--line);border-radius:8px;padding
 <body>
 <header class="top noprint">
   <div class="wrap">
-    <h1>Programa de sonido 2026 · El Río Panajachel</h1>
-    <span style="float:right;margin-top:-2px"><span id="syncStatus"></span> <button class="btn ghost small" data-act="sync-open" style="background:transparent;color:#fff;border-color:#8fa6cf">Sincronizar</button> </span>
+    <h1 id="appTitle">Programa de sonido 2026 · El Río Panajachel</h1>
+    <span style="float:right;margin-top:-2px"><span id="syncStatus"></span> <button class="btn ghost small" data-act="sync-open" hidden style="display:none" tabindex="-1" aria-hidden="true">Sincronizar</button> </span>
     <button class="btn ghost small" id="installBtn" style="display:none;float:right;margin-top:-2px">Instalar app</button>
     <p class="sub">Sube los PDFs de Vida y Ministerio y Discursos Públicos y el programa se arma solo, sin traslapes.</p>
     <div class="months" id="months" role="tablist" aria-label="Meses"></div>
@@ -1117,6 +1117,11 @@ function initSync(){
   window.addEventListener('online',function(){doSync(false);});
   setInterval(function(){if(document.visibilityState==='visible')doSync(false);},60000);
 }
+function initAdmin(){
+  var n=0,t=null,h=document.getElementById('appTitle');
+  if(h)h.addEventListener('click',function(){n++;clearTimeout(t);t=setTimeout(function(){n=0;},3000);if(n>=5){n=0;openSync();}});
+  try{var q=new URLSearchParams(location.search);if(q.get('admin')){q.delete('admin');var rest=q.toString();history.replaceState(null,'',location.pathname+(rest?'?'+rest:''));openSync();}}catch(e){}
+}
 function openSync(){$('syncUrl').value=sync.url;$('syncCode').value=sync.code;$('syncDlg').showModal();}
 function copyText(tx,msg){
   var dn=function(){toast(msg);};
@@ -1288,6 +1293,7 @@ function init(){
   drop.addEventListener('drop',function(ev){handleFiles(ev.dataTransfer.files);});
   render();
   initSync();
+  initAdmin();
 }
 window.SonidoApp={doSync:doSync,sync:sync,drawMonthImg:drawMonthImg,drawCard:drawCard,state:state,ingest:ingest,regenerate:regenerate,xlsxFor:xlsxFor,getMonth:getMonth,render:render,analysisFor:analysisFor};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
