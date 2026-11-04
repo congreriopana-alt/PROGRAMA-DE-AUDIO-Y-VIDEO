@@ -1086,7 +1086,7 @@ function cardText(row){
 
 /* ---------- imagen del mes ---------- */
 function drawMonthImg(cv,rows,y,m){
-  var W=1600,cols=[205,140,250,250,250,252,253],hdr=['FECHA','Día','SONIDO','VIDEO','PLATAFORMA','MICRÓFONO 1','MICRÓFONO 2'];
+  var W=1600,cols=[300,140,225,225,235,238,237],hdr=['FECHA','Día','SONIDO','VIDEO','PLATAFORMA','MICRÓFONO 1','MICRÓFONO 2'];
   var T1=100,T2=84,T3=84,RH=96,H=T1+T2+T3+rows.length*RH+4;
   cv.width=W;cv.height=H;var c=cv.getContext('2d');
   c.fillStyle='#fff';c.fillRect(0,0,W,H);
@@ -1100,8 +1100,8 @@ function drawMonthImg(cv,rows,y,m){
   rows.forEach(function(r,i){
     var top=y0+i*RH,band=i%2===1;
     c.fillStyle=r.asm?'#e6eaf2':(band?'#eaf0fa':'#fff');c.fillRect(0,top,W,RH);
-    c.fillStyle='#1b2438';c.font=fnt(LATO,400,36);c.fillText(C.fechaLarga(r.iso),xs[0]+cols[0]/2,top+RH/2+2);
-    c.font=fnt(LATO,700,36);c.fillText(r.dia.toLowerCase(),xs[1]+cols[1]/2,top+RH/2+2);
+    c.fillStyle='#1b2438';fitName(c,C.fechaLarga(r.iso),LATO,400,36,cols[0]-24);c.fillText(C.fechaLarga(r.iso),xs[0]+cols[0]/2,top+RH/2+2);
+    fitName(c,r.dia.toLowerCase(),LATO,700,36,cols[1]-20);c.fillText(r.dia.toLowerCase(),xs[1]+cols[1]/2,top+RH/2+2);
     if(r.asm){c.fillStyle='#5d667a';c.font=fnt(LATO,400,36,true);c.fillText('ASAMBLEA DE CIRCUITO',(xs[2]+W)/2,top+RH/2+2);}
     else C.ROLES.forEach(function(k,j){
       var nm=r[k]||'';if(!nm)return;var mw=cols[j+2]-24,cx=xs[j+2]+cols[j+2]/2;c.fillStyle='#1b2438';
