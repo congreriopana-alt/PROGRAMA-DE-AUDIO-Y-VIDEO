@@ -117,6 +117,12 @@ table.mem input[type=text]{width:100%;border:1px solid var(--line);border-radius
 .cardctl{display:flex;flex-direction:column;gap:10px}
 .cardctl select{border:1px solid var(--line);border-radius:8px;padding:8px;max-width:100%}
 .cardctl .hint{color:var(--muted);font-size:14px;margin:0}
+#syncStatus{font-size:13px;color:#b9c6df;margin-left:8px}
+#syncStatus.err{color:#ffb4ab}
+dialog .steps{margin:8px 0 0 18px;padding:0;font-size:14px}
+dialog .steps li{margin-bottom:4px}
+dialog label.f{display:block;margin-top:10px;font-weight:600;font-size:14px}
+dialog input.t{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;margin-top:4px}
 @media print{
   body{background:#fff}
   header.top,.noprint,#toast,#err{display:none!important}
@@ -136,6 +142,7 @@ table.mem input[type=text]{width:100%;border:1px solid var(--line);border-radius
 <header class="top noprint">
   <div class="wrap">
     <h1>Programa de sonido 2026 · El Río Panajachel</h1>
+    <span style="float:right;margin-top:-2px"><span id="syncStatus"></span> <button class="btn ghost small" data-act="sync-open" style="background:transparent;color:#fff;border-color:#8fa6cf">Sincronizar</button> </span>
     <button class="btn ghost small" id="installBtn" style="display:none;float:right;margin-top:-2px">Instalar app</button>
     <p class="sub">Sube los PDFs de Vida y Ministerio y Discursos Públicos y el programa se arma solo, sin traslapes.</p>
     <div class="months" id="months" role="tablist" aria-label="Meses"></div>
@@ -176,6 +183,7 @@ table.mem input[type=text]{width:100%;border:1px solid var(--line);border-radius
     <div class="bar noprint" style="margin-top:12px">
       <button class="btn" data-act="xlsx-month">Descargar mes (Excel)</button>
       <button class="btn ghost" data-act="xlsx-all">Descargar año (Excel)</button>
+      <button class="btn" data-act="img-month">Descargar mes (imagen)</button>
       <button class="btn ghost" data-act="csv">CSV</button>
       <button class="btn ghost" data-act="wa">Copiar para WhatsApp</button>
       <button class="btn ghost" data-act="print">Imprimir</button>
@@ -220,6 +228,29 @@ table.mem input[type=text]{width:100%;border:1px solid var(--line);border-radius
     <span class="grow"></span>
     <button class="btn ghost" data-act="mem-cancel">Cancelar</button>
     <button class="btn" data-act="mem-save">Guardar</button>
+  </div>
+</div></dialog>
+<dialog id="syncDlg"><div class="in">
+  <h2>Sincronizar entre teléfono y computadora</h2>
+  <p style="margin:0;color:var(--muted);font-size:14px">Los programas se guardan en un archivo de tu Google Drive y todos tus aparatos se actualizan solos.</p>
+  <ol class="steps">
+    <li>Entra a <b>script.google.com</b> con tu cuenta de Google y crea un proyecto nuevo.</li>
+    <li>Toca <b>Copiar script</b>, pégalo en el editor (borra lo que había) y cambia la clave <code>sonido2026</code> por una tuya.</li>
+    <li><b>Implementar → Nueva implementación → Aplicación web</b>. Ejecutar como: <b>Yo</b>. Acceso: <b>Cualquier persona</b>. Autoriza los permisos.</li>
+    <li>Copia la URL que termina en <code>/exec</code> y pégala aquí con tu clave.</li>
+    <li>En el otro aparato toca <b>Copiar enlace</b> aquí y ábrelo allá: queda conectado solo.</li>
+  </ol>
+  <label class="f" for="syncUrl">URL de la aplicación web</label>
+  <input class="t" type="url" id="syncUrl" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+  <label class="f" for="syncCode">Clave</label>
+  <input class="t" type="text" id="syncCode" placeholder="la misma que pusiste en el script" autocomplete="off">
+  <div class="bar" style="margin-top:14px">
+    <button class="btn ghost small" data-act="sync-script">Copiar script</button>
+    <button class="btn ghost small" data-act="sync-link">Copiar enlace</button>
+    <button class="btn ghost small" data-act="sync-off">Desconectar</button>
+    <span class="grow"></span>
+    <button class="btn ghost" data-act="sync-close">Cerrar</button>
+    <button class="btn" data-act="sync-save">Guardar y sincronizar</button>
   </div>
 </div></dialog>
 <div id="toast" role="status"></div>
@@ -592,7 +623,7 @@ function loadMembers(){
   if(raw){try{var c=JSON.parse(raw);if(c&&c.members&&c.members.length&&c.rv===RV)return c.members;}catch(e){}}
   return JSON.parse(JSON.stringify(DEFAULT_MEMBERS));
 }
-function saveCfg(){store.set(KCFG,JSON.stringify({rv:RV,members:state.members}));}
+function saveCfg(){store.set(KCFG,JSON.stringify({rv:RV,members:state.members,updated:new Date().toISOString()}));if(typeof scheduleSync==='function')scheduleSync();}
 function blankMonth(){return {rows:[],sections:[],files:{},updated:null};}
 function lockedFor(mi){
   var key=YEAR+'-'+mm2(mi);
@@ -609,7 +640,7 @@ function getMonth(mi){
   (m.rows||[]).forEach(function(r){C.ROLES.forEach(function(k){if(r[k])r[k]=C.canonName(r[k],state.members);});});
   state.months[k]=m;return m;
 }
-function saveMonth(mi){var m=getMonth(mi);m.updated=new Date().toISOString();store.set(KMES+mm2(mi),JSON.stringify(m));}
+function saveMonth(mi){var m=getMonth(mi);m.updated=new Date().toISOString();store.set(KMES+mm2(mi),JSON.stringify(m));if(typeof scheduleSync==='function')scheduleSync();}
 function hasData(mi){var m=getMonth(mi);return m.rows.length>0;}
 function otherHist(mi){
   var lists=[];for(var i=0;i<12;i++){if(i===mi)continue;lists.push(getMonth(i).rows);}
@@ -954,6 +985,119 @@ function cardText(row){
   l.push('','Muchas gracias por su buena disposición. Hebreos 6:10','¡Que Jehová bendiga sus esfuerzos!');return l.join('\n');
 }
 
+
+/* ---------- imagen del mes ---------- */
+function drawMonthImg(cv,rows,y,m){
+  var W=1600,cols=[205,140,250,250,250,252,253],hdr=['FECHA','Día','SONIDO','VIDEO','PLATAFORMA','MICRÓFONO 1','MICRÓFONO 2'];
+  var T1=100,T2=84,T3=84,RH=96,H=T1+T2+T3+rows.length*RH+4;
+  cv.width=W;cv.height=H;var c=cv.getContext('2d');
+  c.fillStyle='#fff';c.fillRect(0,0,W,H);
+  c.textBaseline='middle';c.textAlign='center';
+  c.fillStyle='#14295c';c.fillRect(0,0,W,T1);c.fillStyle='#fff';c.font=fnt(LATO,900,54);c.fillText('PROGRAMA DE AUDIO Y VIDEO',W/2,T1/2+2);
+  c.fillStyle='#2b5c9e';c.fillRect(0,T1,W,T2);c.fillStyle='#fff';c.font=fnt(LATO,700,40);c.fillText('Congregación El Río — Panajachel - '+C.MESES[m]+' '+y,W/2,T1+T2/2+2);
+  var xs=[0];cols.forEach(function(w,i){xs.push(xs[i]+w);});
+  c.fillStyle='#1f3f73';c.fillRect(0,T1+T2,W,T3);c.fillStyle='#fff';c.font=fnt(LATO,700,30);
+  hdr.forEach(function(h,i){c.fillText(h,xs[i]+cols[i]/2,T1+T2+T3/2+2);});
+  var y0=T1+T2+T3;
+  rows.forEach(function(r,i){
+    var top=y0+i*RH,band=i%2===1;
+    c.fillStyle=r.asm?'#e6eaf2':(band?'#eaf0fa':'#fff');c.fillRect(0,top,W,RH);
+    c.fillStyle='#1b2438';c.font=fnt(LATO,400,36);c.fillText(C.fechaLarga(r.iso),xs[0]+cols[0]/2,top+RH/2+2);
+    c.font=fnt(LATO,700,36);c.fillText(r.dia.toLowerCase(),xs[1]+cols[1]/2,top+RH/2+2);
+    if(r.asm){c.fillStyle='#5d667a';c.font=fnt(LATO,400,36,true);c.fillText('ASAMBLEA DE CIRCUITO',(xs[2]+W)/2,top+RH/2+2);}
+    else C.ROLES.forEach(function(k,j){
+      var nm=r[k]||'';if(!nm)return;var mw=cols[j+2]-24,cx=xs[j+2]+cols[j+2]/2;c.fillStyle='#1b2438';
+      c.font=fnt(LATO,400,30);
+      if(c.measureText(nm).width>mw&&nm.split(' ').length>2){
+        var w=nm.split(' '),h=Math.ceil(w.length/2),l1=w.slice(0,h).join(' '),l2=w.slice(h).join(' ');
+        fitName(c,l1+(l1.length>l2.length?'':''),LATO,400,32,mw);var s1=c.font;
+        var sz=Math.min(32,parseInt(/(\d+)px/.exec(s1)[1],10));fitName(c,l2,LATO,400,32,mw);sz=Math.min(sz,parseInt(/(\d+)px/.exec(c.font)[1],10));
+        c.font=fnt(LATO,400,sz);c.fillText(l1,cx,top+RH/2-17);c.fillText(l2,cx,top+RH/2+19);
+      }else{fitName(c,nm,LATO,400,38,mw);c.fillText(nm,cx,top+RH/2+2);}
+    });
+  });
+  // rejilla
+  c.strokeStyle='#000';c.lineWidth=2;
+  for(var i=0;i<=rows.length;i++){var yy=y0+i*RH;c.beginPath();c.moveTo(0,yy);c.lineTo(W,yy);c.stroke();}
+  c.beginPath();c.moveTo(0,T1+T2);c.lineTo(W,T1+T2);c.stroke();
+  rows.forEach(function(r,i){var top=y0+i*RH;(r.asm?[0,1,2,7]:[0,1,2,3,4,5,6,7]).forEach(function(j){var x=j===7?W-1:xs[j]+(j===0?1:0);c.beginPath();c.moveTo(x,top);c.lineTo(x,top+RH);c.stroke();});});
+  c.beginPath();c.moveTo(1,T1+T2);c.lineTo(1,y0);c.moveTo(W-1,T1+T2);c.lineTo(W-1,y0);c.stroke();
+  c.textAlign='left';c.textBaseline='alphabetic';
+}
+function monthBlob(){
+  var mi=state.cur,rows=getMonth(mi).rows;
+  return assetsReady.then(function(){var cv=document.createElement('canvas');drawMonthImg(cv,rows,YEAR,mi);return new Promise(function(res){cv.toBlob(res,'image/png');});});
+}
+function monthImgName(){return 'Programa_Sonido_'+cap(C.MESES[state.cur])+'_'+YEAR+'.png';}
+
+/* ---------- sincronización con Google Drive ---------- */
+var GAS_SCRIPT="// Sonido · El Río Panajachel — sincronización entre aparatos\n// 1) Cambia el CODIGO por una clave tuya (la misma que pondrás en la app).\n// 2) Implementar > Nueva implementación > Aplicación web\n//    Ejecutar como: Yo   |   Quién tiene acceso: Cualquier persona\n// 3) Copia la URL que termina en /exec y pégala en la app (botón \"Sincronizar\").\nvar CODIGO = 'sonido2026';\nvar ARCHIVO = 'sonido-el-rio-datos.json';\n\nfunction leer_() {\n  var it = DriveApp.getFilesByName(ARCHIVO);\n  if (it.hasNext()) {\n    try { var d = JSON.parse(it.next().getBlob().getDataAsString()); d.months = d.months || {}; return d; } catch (e) {}\n  }\n  return { months: {}, cfg: null };\n}\nfunction guardar_(d) {\n  var txt = JSON.stringify(d), it = DriveApp.getFilesByName(ARCHIVO);\n  if (it.hasNext()) it.next().setContent(txt);\n  else DriveApp.createFile(ARCHIVO, txt, MimeType.PLAIN_TEXT);\n}\nfunction mezclar_(srv, inc) {\n  var out = { months: srv.months || {}, cfg: srv.cfg || null };\n  var im = (inc && inc.months) || {};\n  Object.keys(im).forEach(function (k) {\n    var a = im[k], b = out.months[k];\n    if (a && a.updated && (!b || !b.updated || String(a.updated) > String(b.updated))) out.months[k] = a;\n  });\n  var c = inc && inc.cfg;\n  if (c && c.updated && (!out.cfg || !out.cfg.updated || String(c.updated) > String(out.cfg.updated))) out.cfg = c;\n  return out;\n}\nfunction salida_(o) {\n  return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON);\n}\nfunction doPost(e) {\n  var lock = LockService.getScriptLock();\n  lock.waitLock(25000);\n  try {\n    var b = JSON.parse((e && e.postData && e.postData.contents) || '{}');\n    if (b.code !== CODIGO) return salida_({ ok: false, error: 'Código incorrecto' });\n    var m = mezclar_(leer_(), b);\n    guardar_(m);\n    return salida_({ ok: true, data: m });\n  } catch (err) {\n    return salida_({ ok: false, error: String(err) });\n  } finally {\n    lock.releaseLock();\n  }\n}\nfunction doGet() { return salida_({ ok: true, mensaje: 'Sonido El Río: sincronización activa' }); }\n";
+var KSYNC='sonido2026:sync';
+var sync={url:'',code:'',busy:false,pending:false,last:null,err:null,timer:null};
+function loadSync(){try{var o=JSON.parse(store.get(KSYNC)||'{}');sync.url=o.url||'';sync.code=o.code||'';}catch(e){}}
+function saveSyncCfg(){store.set(KSYNC,JSON.stringify({url:sync.url,code:sync.code}));}
+function syncOn(){return !!sync.url;}
+function pad2(n){return (n<10?'0':'')+n;}
+function setSyncStatus(txt){
+  var el=$('syncStatus');if(!el)return;
+  if(!syncOn()){el.textContent='';el.className='';return;}
+  if(txt){el.textContent=txt;el.className='';return;}
+  if(sync.err){el.textContent='Sin sincronizar';el.className='err';el.title=sync.err;return;}
+  el.className='';el.title='';el.textContent=sync.last?('Sincronizado '+pad2(sync.last.getHours())+':'+pad2(sync.last.getMinutes())):'';
+}
+function localPayload(){
+  var months={};
+  for(var i=0;i<12;i++){var raw=store.get(KMES+mm2(i));if(!raw)continue;try{var m=JSON.parse(raw);if(m&&m.updated)months[mm2(i)]=m;}catch(e){}}
+  var cfg=null;try{cfg=JSON.parse(store.get(KCFG)||'null');}catch(e){}
+  return {months:months,cfg:(cfg&&cfg.updated)?cfg:null};
+}
+function applyRemote(d){
+  var ch=false;if(!d)return false;
+  Object.keys(d.months||{}).forEach(function(k){
+    var rm=d.months[k],lm=null,raw=store.get(KMES+k);try{lm=raw?JSON.parse(raw):null;}catch(e){}
+    if(rm&&rm.updated&&(!lm||!lm.updated||String(rm.updated)>String(lm.updated))){store.set(KMES+k,JSON.stringify(rm));delete state.months[k];ch=true;}
+  });
+  if(d.cfg&&d.cfg.members&&d.cfg.members.length&&d.cfg.rv===RV){
+    var lc=null;try{lc=JSON.parse(store.get(KCFG)||'null');}catch(e){}
+    if(!lc||!lc.updated||String(d.cfg.updated)>String(lc.updated)){store.set(KCFG,JSON.stringify(d.cfg));state.members=d.cfg.members;ch=true;}
+  }
+  return ch;
+}
+function doSync(manual){
+  if(!syncOn())return Promise.resolve();
+  if(sync.busy){sync.pending=true;return Promise.resolve();}
+  sync.busy=true;setSyncStatus('Sincronizando…');
+  var body=JSON.stringify(Object.assign({code:sync.code,action:'sync'},localPayload()));
+  return fetch(sync.url,{method:'POST',body:body,redirect:'follow'}).then(function(r){return r.json();}).then(function(res){
+    if(!res||!res.ok)throw new Error((res&&res.error)||'Respuesta inválida del servidor');
+    var ch=applyRemote(res.data);sync.last=new Date();sync.err=null;setSyncStatus();
+    if(ch){render();if(manual)toast('Programa actualizado desde Google Drive');}
+    else if(manual)toast('Todo está al día');
+  }).catch(function(e){
+    sync.err=(e&&e.message)||String(e);setSyncStatus();
+    if(manual)showErr('No se pudo sincronizar: '+sync.err+'. Revisa la URL, la clave y que la implementación esté en "Cualquier persona".');
+  }).then(function(){sync.busy=false;if(sync.pending){sync.pending=false;scheduleSync(500);}});
+}
+function scheduleSync(ms){if(!syncOn())return;clearTimeout(sync.timer);sync.timer=setTimeout(function(){doSync(false);},ms==null?1500:ms);}
+function initSync(){
+  loadSync();
+  try{
+    var q=new URLSearchParams(location.search),u=q.get('sync'),k=q.get('code');
+    if(u){sync.url=u;sync.code=k||'';saveSyncCfg();history.replaceState(null,'',location.pathname);toast('Sincronización conectada');}
+  }catch(e){}
+  setSyncStatus();
+  if(syncOn())doSync(false);
+  document.addEventListener('visibilitychange',function(){if(document.visibilityState==='visible')doSync(false);});
+  window.addEventListener('focus',function(){doSync(false);});
+  window.addEventListener('online',function(){doSync(false);});
+  setInterval(function(){if(document.visibilityState==='visible')doSync(false);},60000);
+}
+function openSync(){$('syncUrl').value=sync.url;$('syncCode').value=sync.code;$('syncDlg').showModal();}
+function copyText(tx,msg){
+  var dn=function(){toast(msg);};
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(tx).then(dn,function(){fallbackCopy(tx);dn();});else{fallbackCopy(tx);dn();}
+}
+
 /* ---------- actions ---------- */
 function download(name,bytes,type){
   var blob=new Blob([bytes],{type:type});var a=document.createElement('a');
@@ -1003,13 +1147,31 @@ function onAction(act,el){
   else if(act==='card-zip'){var rs=cardRows();if(!rs.length)return;Promise.all(rs.map(function(r){return cardBlob(r).then(function(b){return b.arrayBuffer();}).then(function(ab){return {name:cardName(r),data:new Uint8Array(ab)};});})).then(function(files){download('Recordatorios_'+C.MESES[mi]+'_'+YEAR+'.zip',C.zip(files),'application/zip');toast(files.length+' recordatorios en el ZIP');});}
   else if(act==='card-text'){var tr=cardRow();if(!tr)return;var tx=cardText(tr);var dn=function(){toast('Texto copiado');};
     if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(tx).then(dn,function(){fallbackCopy(tx);dn();});else{fallbackCopy(tx);dn();}}
+  else if(act==='img-month'){if(!getMonth(mi).rows.length){toast('No hay programa en este mes');return;}monthBlob().then(function(b){return b.arrayBuffer();}).then(function(ab){download(monthImgName(),new Uint8Array(ab),'image/png');toast('Descargando imagen de '+C.MESES[mi]);});}
+  else if(act==='sync-open'){openSync();}
+  else if(act==='sync-close'){$('syncDlg').close();}
+  else if(act==='sync-save'){
+    var u=$('syncUrl').value.trim(),k=$('syncCode').value.trim();
+    if(!/^https?:\/\//.test(u)){showErr('Pega la URL completa de la aplicación web (empieza con https://).');return;}
+    if(!k){showErr('Escribe la clave que pusiste en el script.');return;}
+    clearErr();sync.url=u;sync.code=k;sync.err=null;saveSyncCfg();$('syncDlg').close();doSync(true);
+  }
+  else if(act==='sync-off'){sync.url='';sync.code='';saveSyncCfg();setSyncStatus();$('syncDlg').close();toast('Sincronización desconectada');}
+  else if(act==='sync-script'){copyText(GAS_SCRIPT,'Script copiado: pégalo en script.google.com');}
+  else if(act==='sync-link'){
+    var su=$('syncUrl').value.trim()||sync.url,sk=$('syncCode').value.trim()||sync.code;
+    if(!su){showErr('Primero guarda la URL y la clave.');return;}
+    var base=/^https?:$/.test(location.protocol)?(location.origin+location.pathname):'';
+    if(!base){copyText('URL: '+su+'\nClave: '+sk,'Copiado. Pégalos en "Sincronizar" del otro aparato');}
+    else copyText(base+'?sync='+encodeURIComponent(su)+'&code='+encodeURIComponent(sk),'Enlace copiado: ábrelo en el otro aparato');
+  }
   else if(act==='backup'){
     var bk={version:1,cfg:{members:state.members},months:{}};
     for(var i=0;i<12;i++){var mm=getMonth(i);if(mm.rows.length||mm.sections.length)bk.months[mm2(i)]=mm;}
     download('Sonido_ElRio_respaldo.json',JSON.stringify(bk),'application/json');
   }else if(act==='clear'){
     if(!window.confirm('¿Borrar el programa de '+C.MESES[mi]+'? Se guardará vacío.'))return;
-    state.months[mm2(mi)]=blankMonth();store.del(KMES+mm2(mi));render();
+    var bm=blankMonth();bm.rows=lockedFor(mi);state.months[mm2(mi)]=bm;saveMonth(mi);render();
   }else if(act==='paste'){
     var t=$('pasteText').value;if(!t.trim()){showErr('Pega primero el texto del PDF.');return;}
     clearErr();ingest([{name:'texto pegado',text:t,kind:$('pasteKind').value}]);$('pasteText').value='';
@@ -1087,8 +1249,8 @@ function init(){
       f.text().then(function(txt){
         var bk=JSON.parse(txt);if(!bk||!bk.months)throw new Error('El archivo no es una copia de seguridad válida.');
         if(bk.cfg&&bk.cfg.members){state.members=bk.cfg.members;saveCfg();}
-        Object.keys(bk.months).forEach(function(k){store.set(KMES+k,JSON.stringify(bk.months[k]));delete state.months[k];});
-        render();toast('Copia restaurada');
+        Object.keys(bk.months).forEach(function(k){var bm2=bk.months[k];bm2.updated=new Date().toISOString();store.set(KMES+k,JSON.stringify(bm2));delete state.months[k];});
+        render();scheduleSync(300);toast('Copia restaurada');
       }).catch(function(e){showErr(e.message);});
       t.value='';
     }
@@ -1098,8 +1260,9 @@ function init(){
   ['dragleave','drop'].forEach(function(e){drop.addEventListener(e,function(ev){ev.preventDefault();drop.classList.remove('over');});});
   drop.addEventListener('drop',function(ev){handleFiles(ev.dataTransfer.files);});
   render();
+  initSync();
 }
-window.SonidoApp={drawCard:drawCard,state:state,ingest:ingest,regenerate:regenerate,xlsxFor:xlsxFor,getMonth:getMonth,render:render,analysisFor:analysisFor};
+window.SonidoApp={doSync:doSync,sync:sync,drawMonthImg:drawMonthImg,drawCard:drawCard,state:state,ingest:ingest,regenerate:regenerate,xlsxFor:xlsxFor,getMonth:getMonth,render:render,analysisFor:analysisFor};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 /* app instalable y sin internet */
 var installEvt=null;
