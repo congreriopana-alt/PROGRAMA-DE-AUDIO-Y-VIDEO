@@ -1086,6 +1086,11 @@ function cardText(row){
 
 /* ---------- imagen del mes ---------- */
 function drawMonthImg(cv,rows,y,m){
+  var t=document.createElement('canvas');drawMonthInner(t,rows,y,m);
+  var M=32;cv.width=t.width+2*M;cv.height=t.height+2*M;
+  var x=cv.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,cv.width,cv.height);x.drawImage(t,M,M);
+}
+function drawMonthInner(cv,rows,y,m){
   var W=1600,cols=[300,140,225,225,235,238,237],hdr=['FECHA','Día','SONIDO','VIDEO','PLATAFORMA','MICRÓFONO 1','MICRÓFONO 2'];
   var T1=100,T2=84,T3=84,RH=96,H=T1+T2+T3+rows.length*RH+4;
   cv.width=W;cv.height=H;var c=cv.getContext('2d');
@@ -1131,10 +1136,10 @@ function monthImgName(){return 'Programa_Sonido_'+cap(C.MESES[state.cur])+'_'+YE
 /* ---------- WhatsApp ---------- */
 function isMobile(){return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');}
 function shareWA(blobP,name,text){
-  var wa='https://wa.me/?text='+encodeURIComponent(text);
+  var wa=text?'https://wa.me/?text='+encodeURIComponent(text):'https://wa.me/';
   if(isMobile()&&navigator.share&&navigator.canShare){
     blobP.then(function(b){var f=new File([b],name,{type:'image/png'});
-      if(navigator.canShare({files:[f]}))return navigator.share({files:[f],text:text});
+      if(navigator.canShare({files:[f]}))return navigator.share(text?{files:[f],text:text}:{files:[f]});
       window.open(wa,'_blank');
     }).catch(function(e){if(e&&e.name==='AbortError')return;toast('No se pudo abrir WhatsApp. Usa Descargar imagen.');});
     return;
@@ -1264,10 +1269,10 @@ function onAction(act,el){
     else{fallbackCopy(txt);done();}
   }else if(act==='print'){window.print();}
   else if(act==='card-png'){var cr=cardRow();if(!cr){toast('No hay reunión para descargar');return;}cardBlob(cr).then(function(b){b.arrayBuffer().then(function(ab){download(cardName(cr),new Uint8Array(ab),'image/png');toast('Descargando recordatorio');});});}
-  else if(act==='card-wa'){var wr=cardRow();if(!wr){toast('No hay reunión para enviar');return;}shareWA(cardBlob(wr),cardName(wr),cardText(wr));}
-  else if(act==='img-wa'){if(!getMonth(mi).rows.length){toast('No hay programa en este mes');return;}shareWA(monthBlob(),monthImgName(),'Programa de sonido – '+cap(C.MESES[mi])+' '+YEAR+' · El Río Panajachel');}
+  else if(act==='card-wa'){var wr=cardRow();if(!wr){toast('No hay reunión para enviar');return;}shareWA(cardBlob(wr),cardName(wr),'');}
+  else if(act==='img-wa'){if(!getMonth(mi).rows.length){toast('No hay programa en este mes');return;}shareWA(monthBlob(),monthImgName(),'');}
   else if(act==='card-share'){var sr=cardRow();if(!sr)return;cardBlob(sr).then(function(b){var f=new File([b],cardName(sr),{type:'image/png'});
-    if(navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f],text:cardText(sr)}).catch(function(){});
+    if(navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f]}).catch(function(){});
     else if(navigator.clipboard&&window.ClipboardItem)navigator.clipboard.write([new ClipboardItem({'image/png':b})]).then(function(){toast('Imagen copiada: pégala en WhatsApp');},function(){toast('Tu navegador no permite compartir: usa Descargar imagen');});
     else toast('Tu navegador no permite compartir: usa Descargar imagen');});}
   else if(act==='card-zip'){var rs=cardRows();if(!rs.length)return;Promise.all(rs.map(function(r){return cardBlob(r).then(function(b){return b.arrayBuffer();}).then(function(ab){return {name:cardName(r),data:new Uint8Array(ab)};});})).then(function(files){download('Recordatorios_'+C.MESES[mi]+'_'+YEAR+'.zip',C.zip(files),'application/zip');toast(files.length+' recordatorios en el ZIP');});}
